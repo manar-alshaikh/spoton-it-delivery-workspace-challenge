@@ -99,9 +99,11 @@ The starter contains:
 - login page
 - basic JWT auth
 - basic score page and score API
-- IT Workspace shell page
+- blank IT Workspace route for your product design
 - placeholder IT Workspace API endpoints
 - PostgreSQL Docker service
+
+The IT Workspace route is deliberately minimal. Use it as your canvas. You may design the module layout, navigation, cards, tables, boards, forms, dashboards, and detail pages in the way you think best supports the workflow.
 
 ## Quick Start
 
@@ -149,6 +151,22 @@ http://localhost:3000
 Email: intern@spoton.test
 Password: intern123
 ```
+
+## Existing Project Map
+
+Use the starter as a small product shell. You are free to add files, routes, components, services, DTOs, tests, and database helpers as needed.
+
+| Area | What Exists | What You Can Do |
+| --- | --- | --- |
+| Login | `frontend-next/src/app/login/page.tsx`, `backend-nest/src/auth/*` | Keep it, improve UX/errors if needed, protect new routes/APIs |
+| App shell | `frontend-next/src/app/pm/layout.tsx` | Add navigation for Work Items, QA, Releases, dashboards, or detail pages |
+| Workspace canvas | `frontend-next/src/app/pm/it-workspace/page.tsx` | Design the full workspace experience from scratch |
+| Score | `frontend-next/src/app/pm/score/page.tsx`, `backend-nest/src/score/*` | Connect score events to meaningful workflow actions |
+| Workspace API | `backend-nest/src/it-workspace/*` | Replace placeholders with real endpoints and backend rules |
+| Database | PostgreSQL service in `docker-compose.yml` | Add schema/tables/migrations or a clear setup script for your data model |
+| Docs | `AI_USAGE_TEMPLATE.md`, `PROMPT_LOG_TEMPLATE.md`, `DECISIONS_TEMPLATE.md` | Copy templates into final submission files and fill them in |
+
+You may change the visual design of the IT Workspace completely. Keep login and the basic app shell usable, but the workspace itself should reflect your own product thinking.
 
 ## Core Modules
 
