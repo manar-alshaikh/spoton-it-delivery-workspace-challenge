@@ -2,55 +2,78 @@
 
 ## Tools Used
 
-| Tool | Used? | Notes |
+| Tool | Used? | How it was used |
 | --- | --- | --- |
-| Kiro (Claude-based) | Yes | Primary tool for architecture, code generation, and documentation |
-| ChatGPT | No | |
-| Cursor | No | |
+| Kiro | Yes | Main coding assistant for exploring the starter repository, drafting larger implementation changes, suggesting backend and frontend structure, and helping diagnose issues during development. |
+| OpenAI Codex | Yes | Used for code generation, refactoring suggestions, implementation checks, and debugging focused tasks. |
+| ChatGPT | Yes | Used for product-flow review, QA interaction design, visual/UI troubleshooting, documentation wording, and final submission preparation. |
+| Cursor / GitHub Copilot | No | Not used for this submission. |
 
 ## Summary
 
-Kiro was used as an active pair-programmer throughout the challenge. It generated code scaffolding, database schema, and documentation. All engineering decisions — what to build, in what order, and what tradeoffs to accept — were made by the developer. AI suggestions were reviewed, adjusted, and applied selectively.
+AI was used extensively to accelerate implementation during the two-day challenge. I used it to investigate the starter repository, turn requirements into an implementation plan, generate first-pass code for individual features, explain errors, and review UI and workflow ideas.
+
+AI did not act as an unattended code generator. I chose the scope and feature order, decided which suggestions were appropriate for this codebase, integrated the accepted changes, reviewed the affected files, and adjusted or rejected outputs that did not match the product requirements or the intended user experience. The final workspace is therefore AI-assisted, but the workflow design, trade-offs, acceptance criteria, and final implementation choices were managed by me.
+
+## How I Worked With AI
+
+My approach was iterative rather than asking for one large generated application:
+
+1. I first inspected the starter project and identified the blank workspace route, existing authentication, score module, PostgreSQL service, and placeholder API area.
+2. I used AI to propose a small end-to-end delivery path: work items first, then workflow validation, QA checks, releases, score events, and interface polish.
+3. For each area, I reviewed the proposed structure against the challenge requirements and existing files before applying it.
+4. I ran the application, inspected screens and API behaviour, then returned to the code to correct layout, workflow, and interaction issues.
+5. I used AI again for focused fixes rather than treating the first output as final.
 
 ## Main Areas AI Helped With
 
-- **Architecture**: Suggested the raw SQL + `pg.Pool` approach given the absence of an ORM in the starter
-- **Backend**: Generated controller/service scaffolding, DTOs, workflow transition logic, `VALID_TRANSITIONS` map, dynamic SQL `SET` clause builder for PATCH, and the `toWorkItem` row mapper
-- **Frontend**: Generated page and form components matching the existing design system
-- **Database**: Drafted the schema with constraints, FKs, and the score idempotency index
-- **Documentation**: Generated initial DECISIONS.md and this file
-- **Debugging**: Identified shell-specific issues (PowerShell redirection) during schema setup
+- **Codebase investigation and planning:** Mapping the starter project and breaking the challenge into manageable vertical slices instead of trying to implement every feature at once.
+- **Backend and database:** Drafting the PostgreSQL schema, NestJS DTOs, services, controllers, workflow transition checks, QA-readiness validation, release linking, deployment behaviour, and score-event idempotency ideas.
+- **Frontend implementation:** Generating and refining the Kanban workspace structure, reusable UI components, drag-and-drop handling, work-item forms, filtering, detail views, comments, releases, theme support, and API integration.
+- **QA and product behaviour:** Reviewing the QA workflow and improving it from a status-cycle interaction to explicit **Accept**, **Fail**, and **Retest** actions.
+- **Debugging and polish:** Helping locate component/CSS issues, type errors, layout problems, and edge cases, then proposing focused changes to test.
+- **Documentation:** Drafting the initial setup notes, decisions, AI disclosure, prompt log structure, testing notes, and known limitations for review and editing.
 
-## What Was Reviewed Manually
+## What I Reviewed and Decided Manually
 
-- Verified all schema constraints matched the README field requirements exactly
-- Confirmed workflow transition rules matched the spec (including allowed backward moves)
-- Checked that the JWT guard and `@CurrentUser()` decorator were already wired correctly before adding any auth logic
-- Reviewed DB connection setup to ensure `DATABASE_URL` was read from env, not hardcoded
-- Verified the score idempotency index covered the right columns
-- Caught a TypeScript compile error in the service — `item.status` typed as `unknown` from the DB row, needed explicit cast. Fixed before the build passed.
-- Decided to add the QA readiness gate directly inside `transitionStatus` at this stage — AI generated it inline, the decision to include it early was a deliberate engineering call to avoid revisiting the same method later.
+The following decisions were mine and were reviewed manually rather than accepted blindly from AI output:
 
-## What AI Got Wrong
+- **Feature priorities:** I chose to complete a connected delivery flow — work item, QA, release readiness, release deployment, and score behaviour — before spending time on secondary enhancements.
+- **Workflow rules:** I checked that only reasonable forward and backward status moves were available and that invalid shortcuts, such as moving an item directly to release, were blocked by backend logic.
+- **QA release gate:** I required at least one QA check and required every check to pass before an item could move to `ready_for_release`.
+- **QA interaction design:** I rejected the original cycle-through-status interaction because it could accidentally change an accepted test into a failed test. I changed the interaction to explicit **Accept** and **Fail** buttons, with **Retest** as the deliberate way to return a result to pending.
+- **Data and API design:** I kept the module aligned with the existing stack and chose the raw SQL / `pg.Pool` approach rather than adding an ORM late in the challenge.
+- **UI usability:** I reviewed spacing, hierarchy, dark-mode contrast, responsive behaviour, card density, and the clarity of workflow feedback. For example, I corrected the comment-avatar layout after a flex selector stretched a small initial badge into a wide oval.
+- **Security and configuration:** I checked that runtime configuration is read from environment variables and that real `.env` files are not included in the submission.
+- **Final review:** I reviewed generated code in context, adjusted naming and file organisation, and only kept features that worked with the existing project structure.
 
-- Initially suggested using `docker exec ... psql -f -` with stdin redirection, which doesn't work in PowerShell. Had to switch to `docker cp` + `docker exec psql -f /tmp/schema.sql`.
-- Service initially returned `item.status` as `unknown` from the raw DB row, causing a TypeScript error when passed to `validateTransition`. Required a cast — a proper typed row interface would have caught this at design time.
+## Examples of AI Suggestions I Changed or Rejected
 
-## Commands Run
+1. **QA status cycling was not safe enough.** An early UI approach used one clickable icon to cycle from pending to passed to failed. I changed this because a tester could alter a result unintentionally. The final interaction uses separate deliberate actions: Accept, Fail, and Retest.
+
+2. **A generic CSS selector created an avatar bug.** A proposed layout rule gave the last `div` in a comment row `flex: 1`. In the rendered layout this stretched the initials avatar into a large oval. I replaced it with a selector that only expands the comment content and set a fixed square size for the avatar.
+
+3. **Generated output still needed project-specific validation.** Some suggestions were structurally reasonable but required changes to match the actual component hierarchy, existing API types, and the submission scope. I treated generated code as a draft, not as an automatically correct solution.
+
+## Verification and Commands
+
+The application was developed and checked using the project commands below. Final command results are recorded separately in `TESTING.md`.
 
 ```bash
 npm run install:all
 docker compose up -d postgres
-docker cp backend-nest/src/database/schema.sql <container>:/tmp/schema.sql
-docker exec <container> psql -U postgres -d spoton_challenge -f /tmp/schema.sql
 npm run dev:api
 npm run dev:web
+npm run build:api
+npm run build:web
+npm run test:api
+npm run test:web
 ```
 
 ## Known Limitations
 
-_(Update at submission time with any incomplete levels or untested areas)_
+See `KNOWN_LIMITATIONS.md` for the remaining scope and test limitations.
 
 ## Prompt Log
 
-See `PROMPT_LOG.md`.
+Meaningful AI-assisted tasks, including the tools used and my manual review, are recorded in `PROMPT_LOG.md`.

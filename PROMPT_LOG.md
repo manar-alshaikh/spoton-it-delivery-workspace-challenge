@@ -1,111 +1,153 @@
 # Prompt Log
 
-Meaningful AI-assisted steps recorded here. Minor autocomplete and one-liner suggestions are excluded.
+This log records meaningful AI-assisted work. Prompts are faithful summaries rather than full transcripts, and do not include private configuration values.
 
----
-
-## 2026-06-21 — Kiro
+## 2026-06-19 — Kiro
 
 ### Goal
-Understand the full challenge scope, existing codebase, and plan the implementation order.
+Understand the starter repository and create an implementation plan that could be completed within the challenge time.
 
 ### Prompt
-Read all existing source files (auth, score, it-workspace controllers/services, frontend pages, api.ts, package.json, docker-compose) and the README. Produce a grounded step-by-step plan based on what actually exists vs what needs to be built.
+Review the Next.js, NestJS, and PostgreSQL starter project. Identify what already exists, what is only a placeholder, and propose an implementation order for a complete IT delivery workflow: work items, workflow rules, QA, releases, score events, tests, and polish.
 
 ### Output Summary
-Produced a detailed breakdown identifying: what was already complete (auth, JWT guard, score page, api.ts fetch wrapper, login page, app shell), what was a stub (it-workspace controller/service, frontend workspace page), and a prioritized 8-step build plan.
-
-### Files Reviewed
-- `backend-nest/src/auth/*`
-- `backend-nest/src/common/*`
-- `backend-nest/src/score/*`
-- `backend-nest/src/it-workspace/*`
-- `frontend-next/src/app/**`
-- `frontend-next/src/lib/api.ts`
-- `backend-nest/package.json`
-- `docker-compose.yml`
-
-### Manual Review
-Confirmed the plan matched reality — particularly that `pg` was already installed (no ORM needed), the JWT guard was already usable as-is, and the score service was in-memory and would need DB persistence.
-
-### Related Commit
-N/A
-
----
-
-## 2026-06-21 — Kiro
-
-### Goal
-Set up environment variables.
-
-### Prompt
-Copy `.env.example` to `.env` and fill in any missing values.
-
-### Output Summary
-Copied file as-is (all values already correct for local dev) and changed `JWT_SECRET` from the obvious placeholder `dev-secret-change-me` to something less trivial.
+Kiro mapped the main folders and suggested a vertical-slice approach: database and core work-item CRUD first, then server-side workflow rules, QA readiness, releases, score handling, and UI polish.
 
 ### Files Changed
-- `.env` (created)
+- `backend-nest/src/database/schema.sql`
+- `backend-nest/src/it-workspace/*`
+- `frontend-next/src/app/pm/it-workspace/page.tsx`
+- `frontend-next/src/components/board/*`
 
 ### Manual Review
-Verified `DATABASE_URL` matched the `docker-compose.yml` Postgres config exactly. Confirmed `.env` is gitignored.
+I used the phased approach, but kept the scope focused on a working connected flow rather than adding every possible enhancement. I checked that the plan matched the challenge requirements and the existing project structure.
 
 ### Related Commit
-N/A
+Database and core workspace implementation commits.
 
 ---
 
-## 2026-06-21 — Kiro
+## 2026-06-19 — Kiro / OpenAI Codex
 
 ### Goal
-Set up the PostgreSQL schema and shared DB connection.
+Implement the backend foundation for work items and enforce workflow correctness in the API rather than trusting the frontend.
 
 ### Prompt
-Create `db.ts` (shared `pg.Pool`) and `schema.sql` with all required tables: `work_items`, `qa_checks`, `release_notes`, `release_work_items`, `score_events`. Use the README field specs exactly. Add constraints and a score idempotency index. Apply the schema to the running Docker Postgres instance.
+Draft a PostgreSQL schema and NestJS service/controller structure for work items, QA checks, releases, and score events. Include status-transition validation, a release-readiness rule requiring all QA checks to pass, and a way to prevent duplicate score awards.
 
 ### Output Summary
-- Created `db.ts` with a single exported `Pool` reading from `DATABASE_URL`
-- Created `schema.sql` with all 5 tables, CHECK constraints on enums, FK with CASCADE, composite PK on the join table, and a unique index on `score_events(user_id, action, entity_id)`
-- Applied via `docker cp` + `docker exec psql` (stdin redirection not supported in PowerShell)
+The tools proposed schema tables, DTOs, controller methods, service helpers, status-transition logic, and score-event uniqueness handling.
 
 ### Files Changed
 - `backend-nest/src/database/db.ts`
 - `backend-nest/src/database/schema.sql`
-- `DECISIONS.md` (created)
+- `backend-nest/src/it-workspace/constants/workflow.ts`
+- `backend-nest/src/it-workspace/dto/*`
+- `backend-nest/src/it-workspace/it-workspace.controller.ts`
+- `backend-nest/src/it-workspace/it-workspace.service.ts`
+- `backend-nest/src/score/*`
 
 ### Manual Review
-- Verified all column names and types matched README requirements
-- Confirmed `ON DELETE CASCADE` on `qa_checks` is correct (QA checks are owned by work items)
-- Confirmed the unique index columns cover the duplicate-score scenario
-- Caught and fixed the PowerShell redirection issue during schema execution
+I verified allowed and blocked transitions against the task requirements. I kept the QA gate in the backend service so it cannot be bypassed by changing only the frontend. I reviewed the SQL and environment-variable usage before keeping the changes.
 
 ### Related Commit
-N/A
+`feat: implement work items CRUD with workflow transition enforcement`
 
 ---
 
-## 2026-06-21 — Kiro
+## 2026-06-20 — Kiro / OpenAI Codex
 
 ### Goal
-Build Work Items CRUD backend with workflow transition enforcement.
+Build a practical workspace UI instead of a simple CRUD page.
 
 ### Prompt
-Replace stub it-workspace controller and service with real endpoints. Keep transition validation in its own method. Split DTOs and constants into separate files.
+Create a compact engineering workspace using the existing Next.js app: a six-stage Kanban board, work-item cards, create/edit form, filtering, My Work, item details, comments, QA progress, releases, score visibility, dark/light mode, and clear empty/loading/error states. Keep components separated by responsibility.
 
 ### Output Summary
-Created `workflow.ts` constants file with `VALID_TRANSITIONS` map, 3 DTOs with `class-validator`, rewrote service with full CRUD + standalone `validateTransition` + `assertQaReady`, rewrote controller as a thin HTTP layer delegating everything to the service.
+The tools assisted with component scaffolding, TypeScript types, API client calls, drag-and-drop structure, and styling suggestions.
 
 ### Files Changed
-- `backend-nest/src/it-workspace/constants/workflow.ts`
-- `backend-nest/src/it-workspace/dto/create-work-item.dto.ts`
-- `backend-nest/src/it-workspace/dto/update-work-item.dto.ts`
-- `backend-nest/src/it-workspace/dto/transition-status.dto.ts`
-- `backend-nest/src/it-workspace/it-workspace.service.ts`
-- `backend-nest/src/it-workspace/it-workspace.controller.ts`
+- `frontend-next/src/app/pm/it-workspace/page.tsx`
+- `frontend-next/src/components/board/*`
+- `frontend-next/src/components/layout/*`
+- `frontend-next/src/components/ui/*`
+- `frontend-next/src/lib/*`
+- `frontend-next/src/app/globals.css`
 
 ### Manual Review
-- Caught and fixed a TypeScript compile error — `item.status` was typed as `unknown` from the raw DB row, needed an explicit cast to pass to `validateTransition`. Fixed before the build passed.
-- Decided to include the QA readiness gate inside `transitionStatus` at this stage rather than waiting for Step 5 — the structure was already in place to do it cleanly, and it avoids having to revisit the same method later.
+I reviewed the board flow, adjusted the component boundaries, checked that visible UI states reflected backend rules, and refined spacing and contrast after testing the layout in dark mode.
 
 ### Related Commit
-pending
+`feat: build kanban workspace UI with drag-and-drop and dark/light mode`
+
+---
+
+## 2026-06-21 — ChatGPT
+
+### Goal
+Improve the QA interaction so results cannot change accidentally.
+
+### Prompt
+Review the QA check interaction. The existing status icon cycles through pending, accepted, and failed. Suggest a clearer workflow that makes passing or failing a test intentional and supports retesting after a fix.
+
+### Output Summary
+ChatGPT recommended explicit result buttons instead of status cycling: **Accept** and **Fail** when pending, then **Retest** to deliberately return a completed result to pending.
+
+### Files Changed
+- `frontend-next/src/components/qa/QaPanel.tsx`
+- `frontend-next/src/app/globals.css`
+
+### Manual Review
+I agreed that a cycle interaction was a usability and QA-logic problem. I selected the explicit-action approach, checked that the backend already accepts direct status updates, and kept the release gate dependent on all checks passing.
+
+### Related Commit
+Final UI/QA refinement commit.
+
+---
+
+## 2026-06-21 — ChatGPT
+
+### Goal
+Fix comment initials avatars so they remain small, circular, and readable in dark mode.
+
+### Prompt
+Review the comment row layout. The initials badge is too large and becomes an oval. Identify the CSS rule causing it and provide a small fixed circular avatar that does not consume unnecessary space.
+
+### Output Summary
+ChatGPT identified that a generic flex selector was expanding the wrong element and proposed a targeted content selector with fixed avatar dimensions.
+
+### Files Changed
+- `frontend-next/src/app/globals.css`
+
+### Manual Review
+I inspected the rendered result and confirmed the original selector was stretching the badge. I kept the fixed circle and adjusted the sizing to fit the compact comment layout.
+
+### Related Commit
+Final UI polish commit.
+
+---
+
+## 2026-06-21 — ChatGPT
+
+### Goal
+Prepare transparent submission documentation without hiding the use of AI.
+
+### Prompt
+Write clear submission notes that explain extensive AI assistance while showing the developer’s role in reviewing code, making product decisions, correcting mistakes, testing, and owning the final result.
+
+### Output Summary
+ChatGPT drafted the documentation structure, including AI usage, the prompt log, testing guidance, known limitations, and setup notes.
+
+### Files Changed
+- `AI_USAGE.md`
+- `PROMPT_LOG.md`
+- `DECISIONS.md`
+- `TESTING.md`
+- `KNOWN_LIMITATIONS.md`
+- `README.md`
+
+### Manual Review
+I checked that the documentation matches the actual tools used — Kiro, OpenAI Codex, and ChatGPT — and that it does not claim AI output was accepted without review. I will update final command outcomes in `TESTING.md` after running them locally.
+
+### Related Commit
+Final documentation commit.
