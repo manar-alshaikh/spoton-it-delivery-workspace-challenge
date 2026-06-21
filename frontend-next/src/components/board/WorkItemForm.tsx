@@ -1,25 +1,21 @@
 'use client';
 
-// Modal form for creating and editing work items.
-// Receives an optional `item` for edit mode; omit for create mode.
-
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue';
 import type { WorkItem, WorkItemType, WorkItemPriority, WorkItemStatus } from '@/lib/types';
 
 const TYPES      = ['feature', 'bug', 'improvement', 'maintenance'] as const;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+const TEAM_DIRECTORY = ['Aisha Clarke', 'Ethan Taylor', 'Jordan Cole', 'Maya Wong', 'Sam Patel'];
 
 interface WorkItemFormProps {
-  item?: WorkItem | null;
-  defaultStatus?: string;
-  onSave:  (data: Partial<WorkItem>) => Promise<void>;
-  onClose: () => void;
-  assigneeOptions?: string[];
+  item?:             WorkItem | null;
+  defaultStatus?:    string;
+  onSave:            (data: Partial<WorkItem>) => Promise<void>;
+  onClose:           () => void;
+  assigneeOptions?:  string[];
 }
-
-const TEAM_DIRECTORY = ['Aisha Clarke', 'Ethan Taylor', 'Jordan Cole', 'Maya Wong', 'Sam Patel'];
 
 export default function WorkItemForm({
   item,
@@ -28,37 +24,50 @@ export default function WorkItemForm({
   onClose,
   assigneeOptions = [],
 }: WorkItemFormProps) {
-  const [title,       setTitle]       = useState(item?.title ?? '');
-  const [description, setDescription] = useState(item?.description ?? '');
-  const [type,        setType]        = useState<WorkItemType>(item?.type ?? 'feature');
-  const [priority,    setPriority]    = useState<WorkItemPriority>(item?.priority ?? 'medium');
-  const [assignees,   setAssignees]   = useState(
-    item?.assignee?.split(',').map((name) => name.trim()).filter(Boolean) ?? [],
+  const [title,          setTitle]          = useState(item?.title ?? '');
+  const [description,    setDescription]    = useState(item?.description ?? '');
+  const [type,           setType]           = useState<WorkItemType>(item?.type ?? 'feature');
+  const [priority,       setPriority]       = useState<WorkItemPriority>(item?.priority ?? 'medium');
+  const [dueDate,        setDueDate]        = useState(item?.dueDate?.slice(0, 10) ?? '');
+  const [assignees,      setAssignees]      = useState<string[]>(
+    item?.assignee?.split(',').map((n) => n.trim()).filter(Boolean) ?? [],
   );
-  const [assigneeSearch, setAssigneeSearch] = useState('');
-  const [dueDate,     setDueDate]     = useState(item?.dueDate?.slice(0, 10) ?? '');
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState('');
-  const [currentUser, setCurrentUser] = useState('');
-  const [pickerOpen,  setPickerOpen]  = useState(false);
-  const debouncedAssigneeSearch = useDebouncedValue(assigneeSearch, 250);
+  const [search,         setSearch]         = useState('');
+  const [pickerOpen,     setPickerOpen]     = useState(false);
+  const [currentUser,    setCurrentUser]    = useState('');
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState('');
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const debouncedSearch = useDebouncedValue(search, 220);
 
   useEffect(() => {
-    api.me().then((user) => setCurrentUser(user.name)).catch(() => {});
+    api.me().then((u) => setCurrentUser(u.name)).catch(() => {});
   }, []);
 
-  const people = debouncedAssigneeSearch.trim()
-    ? Array.from(
-        new Set([currentUser, ...assigneeOptions, ...TEAM_DIRECTORY].filter(Boolean)),
-      ).filter((name) =>
-        !assignees.includes(name) && name.toLowerCase().includes(debouncedAssigneeSearch.toLowerCase()),
-      )
+  // Close picker on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const suggestions = debouncedSearch.trim()
+    ? Array.from(new Set([currentUser, ...assigneeOptions, ...TEAM_DIRECTORY].filter(Boolean)))
+        .filter((n) => !assignees.includes(n) && n.toLowerCase().includes(debouncedSearch.toLowerCase()))
     : [];
 
   function addAssignee(name: string) {
-    if (name && !assignees.includes(name)) setAssignees((current) => [...current, name]);
-    setAssigneeSearch('');
+    if (name && !assignees.includes(name)) setAssignees((prev) => [...prev, name]);
+    setSearch('');
     setPickerOpen(false);
+  }
+
+  function removeAssignee(name: string) {
+    setAssignees((prev) => prev.filter((n) => n !== name));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -77,8 +86,8 @@ export default function WorkItemForm({
         ...(!item && { status: defaultStatus as WorkItemStatus }),
       });
       onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -93,28 +102,22 @@ export default function WorkItemForm({
         </div>
 
         <form onSubmit={handleSubmit} className="modal__body">
+          {/* Title */}
           <div className="field">
             <label htmlFor="wi-title">Title *</label>
-            <input
-              id="wi-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Short, clear title"
-              maxLength={200}
-            />
+            <input id="wi-title" value={title} onChange={(e) => setTitle(e.target.value)}
+              placeholder="Short, clear title" maxLength={200} />
           </div>
 
+          {/* Description */}
           <div className="field">
             <label htmlFor="wi-description">Description</label>
-            <textarea
-              id="wi-description"
-              value={description}
+            <textarea id="wi-description" value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="What needs to be done?"
-            />
+              rows={3} placeholder="What needs to be done?" />
           </div>
 
+          {/* Type / Priority / Due date — 3 columns */}
           <div className="form-row form-row--three">
             <div className="field">
               <label htmlFor="wi-type">Type</label>
@@ -122,94 +125,79 @@ export default function WorkItemForm({
                 {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-
             <div className="field">
               <label htmlFor="wi-priority">Priority</label>
               <select id="wi-priority" value={priority} onChange={(e) => setPriority(e.target.value as WorkItemPriority)}>
                 {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-
             <div className="field">
               <label htmlFor="wi-due">Due Date</label>
-              <input
-                id="wi-due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+              <input id="wi-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
 
-          <div className="assignee-section">
-            <div className="field">
-              <label htmlFor="wi-assignee">Add assignees</label>
-              <div
-                className="assignee-picker"
-                onFocus={() => setPickerOpen(true)}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setPickerOpen(false);
-                  }
-                }}
-              >
-                <div className="assignee-picker__input-row">
-                  <input
-                    id="wi-assignee"
-                    value={assigneeSearch}
-                    onChange={(e) => setAssigneeSearch(e.target.value)}
-                    placeholder={assignees.length ? 'Add another person' : 'Search team members'}
-                    autoComplete="off"
-                  />
+          {/* Assignee — [search + assign self] LEFT | [assigned box] RIGHT */}
+          <div className="field">
+            <label>Assignees</label>
+            <div className="assignee-layout">
+              {/* Left: search + assign self stacked */}
+              <div className="assignee-layout__left" ref={pickerRef}>
+                <div className="assignee-row">
+                  <div className="assignee-row__input-wrap">
+                    <input
+                      id="wi-assignee"
+                      type="search"
+                      value={search}
+                      onChange={(e) => { setSearch(e.target.value); setPickerOpen(true); }}
+                      onFocus={() => setPickerOpen(true)}
+                      placeholder="Search team members…"
+                      autoComplete="off"
+                    />
+                    {pickerOpen && debouncedSearch.trim() && (
+                      <div className="assignee-row__dropdown" role="listbox">
+                        {suggestions.length ? suggestions.map((name) => (
+                          <button key={name} type="button" role="option" onMouseDown={() => addAssignee(name)}>
+                            <span className="assignee-avatar">
+                              {name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('')}
+                            </span>
+                            {name}{name === currentUser ? ' (you)' : ''}
+                          </button>
+                        )) : (
+                          <div className="assignee-row__empty">No matches</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="button"
+                    className="assignee-self-btn"
                     onClick={() => addAssignee(currentUser)}
                     disabled={!currentUser || assignees.includes(currentUser)}
                   >
                     Assign self
                   </button>
                 </div>
-                {pickerOpen && assigneeSearch === debouncedAssigneeSearch && debouncedAssigneeSearch.trim() && (
-                  <div className="assignee-picker__results" aria-label="Team members">
-                    {people.map((name) => (
-                      <button
-                        type="button"
-                        key={name}
-                        onClick={() => addAssignee(name)}
-                      >
-                        <span className="assignee-picker__avatar">
-                          {name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('')}
-                        </span>
-                        <span>{name}{name === currentUser ? ' (you)' : ''}</span>
-                      </button>
-                    ))}
-                    {!people.length && <div className="assignee-picker__empty">No team members found</div>}
-                  </div>
-                )}
               </div>
-            </div>
 
-            <div className="field assignee-selection">
-              <label>Assigned people</label>
-              <div className="assignee-selection__box" aria-label="Selected assignees">
-                {assignees.length ? (
-                  <div className="assignee-picker__chips">
-                    {assignees.map((name) => (
-                      <span key={name}>
-                        {name}
-                        <button
-                          type="button"
-                          aria-label={`Remove ${name}`}
-                          onClick={() => setAssignees((current) => current.filter((person) => person !== name))}
-                        >
-                          &times;
-                        </button>
+              {/* Right: fixed-height scrollable box of assigned chips */}
+              <div className="assignee-box" aria-label="Assigned people">
+                <div className="assignee-box__label">Assigned</div>
+                <div className="assignee-box__scroll">
+                  {assignees.length ? assignees.map((name) => (
+                    <span key={name} className="assignee-chip">
+                      <span className="assignee-avatar">
+                        {name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('')}
                       </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="assignee-selection__empty">Assigned to no one</span>
-                )}
+                      {name}
+                      <button type="button" aria-label={`Remove ${name}`} onClick={() => removeAssignee(name)}>
+                        ×
+                      </button>
+                    </span>
+                  )) : (
+                    <span className="assignee-box__empty">No one assigned</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

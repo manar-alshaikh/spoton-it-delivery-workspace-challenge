@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { IsInt, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import type { RequestUser } from '../common/request-user';
@@ -13,6 +13,10 @@ class AwardScoreDto {
   @Min(1)
   @Max(20)
   points!: number;
+
+  @IsString()
+  @IsOptional()
+  entityId?: string;
 }
 
 @UseGuards(JwtAuthGuard)
@@ -27,6 +31,6 @@ export class ScoreController {
 
   @Post('events')
   award(@CurrentUser() user: RequestUser, @Body() body: AwardScoreDto) {
-    return this.score.award(user, body.action, body.points);
+    return this.score.award(user, body.action, body.points, body.entityId);
   }
 }

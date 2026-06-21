@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { formatShortDate, getInitials, labelFromKey } from '@/lib/utils/formatting';
 import Badge from '@/components/ui/Badge';
 import Icon from '@/components/ui/Icon';
+import QaPanel from '@/components/qa/QaPanel';
 import type { WorkItem, WorkItemComment } from '@/lib/types';
 
 interface WorkItemDetailsProps {
@@ -124,6 +125,11 @@ export default function WorkItemDetails({ item, onClose, onEdit }: WorkItemDetai
               <div><dt>Created</dt><dd>{formatDateTime(details.createdAt)}</dd></div>
               <div><dt>Last updated</dt><dd>{formatDateTime(details.updatedAt)}</dd></div>
             </dl>
+
+            {/* QA Checks inline */}
+            <div className="detail-section">
+              <QaPanel workItemId={details.id} />
+            </div>
           </div>
 
           <aside className="work-item-comments">
