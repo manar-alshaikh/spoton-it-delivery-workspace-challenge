@@ -81,3 +81,31 @@ Create `db.ts` (shared `pg.Pool`) and `schema.sql` with all required tables: `wo
 
 ### Related Commit
 N/A
+
+---
+
+## 2026-06-21 — Kiro
+
+### Goal
+Build Work Items CRUD backend with workflow transition enforcement.
+
+### Prompt
+Replace stub it-workspace controller and service with real endpoints. Keep transition validation in its own method. Split DTOs and constants into separate files.
+
+### Output Summary
+Created `workflow.ts` constants file with `VALID_TRANSITIONS` map, 3 DTOs with `class-validator`, rewrote service with full CRUD + standalone `validateTransition` + `assertQaReady`, rewrote controller as a thin HTTP layer delegating everything to the service.
+
+### Files Changed
+- `backend-nest/src/it-workspace/constants/workflow.ts`
+- `backend-nest/src/it-workspace/dto/create-work-item.dto.ts`
+- `backend-nest/src/it-workspace/dto/update-work-item.dto.ts`
+- `backend-nest/src/it-workspace/dto/transition-status.dto.ts`
+- `backend-nest/src/it-workspace/it-workspace.service.ts`
+- `backend-nest/src/it-workspace/it-workspace.controller.ts`
+
+### Manual Review
+- Caught and fixed a TypeScript compile error — `item.status` was typed as `unknown` from the raw DB row, needed an explicit cast to pass to `validateTransition`. Fixed before the build passed.
+- Decided to include the QA readiness gate inside `transitionStatus` at this stage rather than waiting for Step 5 — the structure was already in place to do it cleanly, and it avoids having to revisit the same method later.
+
+### Related Commit
+pending

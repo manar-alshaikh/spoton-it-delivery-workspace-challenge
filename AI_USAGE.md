@@ -15,7 +15,7 @@ Kiro was used as an active pair-programmer throughout the challenge. It generate
 ## Main Areas AI Helped With
 
 - **Architecture**: Suggested the raw SQL + `pg.Pool` approach given the absence of an ORM in the starter
-- **Backend**: Generated controller/service scaffolding, DTOs, workflow transition logic
+- **Backend**: Generated controller/service scaffolding, DTOs, workflow transition logic, `VALID_TRANSITIONS` map, dynamic SQL `SET` clause builder for PATCH, and the `toWorkItem` row mapper
 - **Frontend**: Generated page and form components matching the existing design system
 - **Database**: Drafted the schema with constraints, FKs, and the score idempotency index
 - **Documentation**: Generated initial DECISIONS.md and this file
@@ -28,10 +28,13 @@ Kiro was used as an active pair-programmer throughout the challenge. It generate
 - Checked that the JWT guard and `@CurrentUser()` decorator were already wired correctly before adding any auth logic
 - Reviewed DB connection setup to ensure `DATABASE_URL` was read from env, not hardcoded
 - Verified the score idempotency index covered the right columns
+- Caught a TypeScript compile error in the service — `item.status` typed as `unknown` from the DB row, needed explicit cast. Fixed before the build passed.
+- Decided to add the QA readiness gate directly inside `transitionStatus` at this stage — AI generated it inline, the decision to include it early was a deliberate engineering call to avoid revisiting the same method later.
 
 ## What AI Got Wrong
 
 - Initially suggested using `docker exec ... psql -f -` with stdin redirection, which doesn't work in PowerShell. Had to switch to `docker cp` + `docker exec psql -f /tmp/schema.sql`.
+- Service initially returned `item.status` as `unknown` from the raw DB row, causing a TypeScript error when passed to `validateTransition`. Required a cast — a proper typed row interface would have caught this at design time.
 
 ## Commands Run
 

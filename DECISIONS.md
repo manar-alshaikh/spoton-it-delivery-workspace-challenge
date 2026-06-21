@@ -42,13 +42,30 @@ psql $DATABASE_URL -f backend-nest/src/database/schema.sql
 
 ## API Design
 
-_(Fill in as endpoints are built)_
+All endpoints are under `/it-workspace` and protected by `JwtAuthGuard`.
+
+### Work Items
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/work-items` | Create a new work item |
+| `GET` | `/work-items` | List all, with optional filters: `?status= ?priority= ?assignee= ?search= ?mine=true` |
+| `GET` | `/work-items/:id` | Get a single work item |
+| `PATCH` | `/work-items/:id` | Update fields (title, description, type, priority, assignee, dueDate) |
+| `PATCH` | `/work-items/:id/status` | Transition status — enforces `VALID_TRANSITIONS` and QA gate |
+| `DELETE` | `/work-items/:id` | Delete a work item |
+
+**Why `PATCH /:id/status` is separate from `PATCH /:id`:**
+Status transitions carry business rules (transition guard, QA readiness check). Separating them makes the intent explicit and prevents accidental status changes through a generic field update.
+
+**Why `?mine=true` instead of a separate `/my-work` route:**
+The filter approach keeps the API surface small. The frontend can pass `?mine=true` to get the current user's items without needing a dedicated endpoint.
 
 ---
 
 ## Frontend Design
 
-_(Fill in as pages are built)_
+_(Fill in as pages are built — kanban board, work item detail, QA checks, releases)_
 
 ---
 
