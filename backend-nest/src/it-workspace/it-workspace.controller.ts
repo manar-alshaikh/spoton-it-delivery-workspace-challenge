@@ -16,6 +16,7 @@ import { ItWorkspaceService } from './it-workspace.service';
 import { CreateWorkItemDto } from './dto/create-work-item.dto';
 import { UpdateWorkItemDto } from './dto/update-work-item.dto';
 import { TransitionStatusDto } from './dto/transition-status.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('it-workspace')
@@ -61,6 +62,20 @@ export class ItWorkspaceController {
   @Get('work-items/:id')
   getOne(@Param('id') id: string) {
     return this.workspace.findOne(id);
+  }
+
+  @Get('work-items/:id/comments')
+  comments(@Param('id') id: string) {
+    return this.workspace.findComments(id);
+  }
+
+  @Post('work-items/:id/comments')
+  addComment(
+    @Param('id') id: string,
+    @Body() body: CreateCommentDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.workspace.addComment(id, body.message, user);
   }
 
   @Patch('work-items/:id')

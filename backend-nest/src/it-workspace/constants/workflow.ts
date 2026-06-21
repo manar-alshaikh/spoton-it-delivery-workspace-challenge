@@ -3,12 +3,12 @@
 // This is the single source of truth — service and tests both import from here.
 
 export const VALID_TRANSITIONS: Record<string, string[]> = {
-  backlog:           ['planned'],
-  planned:           ['in_progress', 'backlog'],
-  in_progress:       ['qa', 'planned'],
-  qa:                ['ready_for_release', 'in_progress'],
-  ready_for_release: ['qa'],
-  released:          [],
+  backlog:           ['planned', 'in_progress', 'qa', 'ready_for_release', 'released'],
+  planned:           ['backlog', 'in_progress', 'qa', 'ready_for_release', 'released'],
+  in_progress:       ['backlog', 'planned', 'qa', 'ready_for_release', 'released'],
+  qa:                ['backlog', 'planned', 'in_progress', 'ready_for_release', 'released'],
+  ready_for_release: ['backlog', 'planned', 'in_progress', 'qa', 'released'],
+  released:          ['backlog', 'planned', 'in_progress', 'qa', 'ready_for_release'],
 };
 
 export const ALL_STATUSES   = Object.keys(VALID_TRANSITIONS);

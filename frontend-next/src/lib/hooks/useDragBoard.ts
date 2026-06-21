@@ -34,12 +34,14 @@ export function useDragBoard({ items, onStatusChange }: UseDragBoardOptions) {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      // over.id is a column status when dropped on an empty column,
-      // or another card's id when dropped on an occupied column.
+      // Explicit metadata resolves both empty columns and cards in occupied columns.
+      const statusFromDropData = over.data.current?.status;
       const isColumnId = (WORK_ITEM_STATUSES as readonly string[]).includes(over.id as string);
-      const targetStatus = isColumnId
-        ? (over.id as string)
-        : items.find((i) => i.id === over.id)?.status;
+      const targetStatus = typeof statusFromDropData === 'string'
+        ? statusFromDropData
+        : isColumnId
+          ? (over.id as string)
+          : items.find((i) => i.id === over.id)?.status;
 
       if (!targetStatus) return;
 

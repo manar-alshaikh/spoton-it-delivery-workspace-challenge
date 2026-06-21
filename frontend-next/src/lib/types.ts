@@ -25,6 +25,15 @@ export interface WorkItem {
   updatedAt: string;
 }
 
+export interface WorkItemComment {
+  id: string;
+  workItemId: string;
+  authorId: string;
+  authorName: string;
+  message: string;
+  createdAt: string;
+}
+
 // ─── QA Checks ───────────────────────────────────────────────────────────────
 
 export type QaStatus = 'pending' | 'passed' | 'failed';

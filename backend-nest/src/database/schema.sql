@@ -45,6 +45,17 @@ CREATE TABLE IF NOT EXISTS qa_checks (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Discussion attached to a work item. Author names are stored with the
+-- message so existing comments remain readable if a profile later changes.
+CREATE TABLE IF NOT EXISTS work_item_comments (
+  id           TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  work_item_id TEXT        NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
+  author_id    TEXT        NOT NULL,
+  author_name  TEXT        NOT NULL,
+  message      TEXT        NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ------------------------------------------------------------
 -- release_notes
 -- Represents a planned or deployed software release.

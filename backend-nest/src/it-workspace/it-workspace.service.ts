@@ -7,6 +7,7 @@ import type { RequestUser } from '../common/request-user';
 
 @Injectable()
 export class ItWorkspaceService {
+  private commentsTableReady: Promise<void> | null = null;
 
   // ─── Validation ───────────────────────────────────────────────────────────
 
@@ -42,8 +43,8 @@ export class ItWorkspaceService {
       conditions.push(`priority = $${params.length}`);
     }
     if (filters.assignee) {
-      params.push(filters.assignee);
-      conditions.push(`assignee = $${params.length}`);
+      params.push(`%${filters.assignee}%`);
+      conditions.push(`assignee ILIKE $${params.length}`);
     }
     if (filters.createdBy) {
       params.push(filters.createdBy);
@@ -69,6 +70,31 @@ export class ItWorkspaceService {
     );
     if (!rows[0]) throw new NotFoundException(`Work item ${id} not found`);
     return this.toWorkItem(rows[0]);
+  }
+
+  async findComments(workItemId: string) {
+    await this.findOne(workItemId);
+    await this.ensureCommentsTable();
+    const { rows } = await db.query(
+      `SELECT id, work_item_id, author_id, author_name, message, created_at
+       FROM work_item_comments
+       WHERE work_item_id = $1
+       ORDER BY created_at ASC`,
+      [workItemId],
+    );
+    return rows.map(this.toComment);
+  }
+
+  async addComment(workItemId: string, message: string, user: RequestUser) {
+    await this.findOne(workItemId);
+    await this.ensureCommentsTable();
+    const { rows } = await db.query(
+      `INSERT INTO work_item_comments (work_item_id, author_id, author_name, message)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, work_item_id, author_id, author_name, message, created_at`,
+      [workItemId, user.id, user.name, message.trim()],
+    );
+    return this.toComment(rows[0]);
   }
 
   async create(dto: CreateWorkItemDto, user: RequestUser) {
@@ -134,11 +160,6 @@ export class ItWorkspaceService {
 
     this.validateTransition(item.status as string, newStatus);
 
-    // QA readiness gate — enforced here before writing to DB
-    if (newStatus === 'ready_for_release') {
-      await this.assertQaReady(id);
-    }
-
     const { rows } = await db.query(
       `UPDATE work_items
        SET status = $1, updated_at = $2
@@ -176,23 +197,34 @@ export class ItWorkspaceService {
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
-  /** Throws if any QA check is not passed, or if there are none. */
-  private async assertQaReady(workItemId: string): Promise<void> {
-    const { rows } = await db.query(
-      'SELECT status FROM qa_checks WHERE work_item_id = $1',
-      [workItemId],
-    );
-    if (rows.length === 0) {
-      throw new BadRequestException(
-        'Work item has no QA checks. All QA checks must pass before marking as ready for release.',
-      );
+  private ensureCommentsTable(): Promise<void> {
+    if (!this.commentsTableReady) {
+      this.commentsTableReady = db.query(
+        `CREATE TABLE IF NOT EXISTS work_item_comments (
+          id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          work_item_id TEXT NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
+          author_id    TEXT NOT NULL,
+          author_name  TEXT NOT NULL,
+          message      TEXT NOT NULL,
+          created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )`,
+      ).then(() => undefined).catch((error) => {
+        this.commentsTableReady = null;
+        throw error;
+      });
     }
-    const notPassed = rows.filter((r: { status: string }) => r.status !== 'passed');
-    if (notPassed.length > 0) {
-      throw new BadRequestException(
-        `${notPassed.length} QA check(s) are not passed. All must pass before marking as ready for release.`,
-      );
-    }
+    return this.commentsTableReady!;
+  }
+
+  private toComment(row: Record<string, unknown>) {
+    return {
+      id: row.id,
+      workItemId: row.work_item_id,
+      authorId: row.author_id,
+      authorName: row.author_name,
+      message: row.message,
+      createdAt: row.created_at,
+    };
   }
 
   /** Maps a DB row (snake_case) to camelCase response shape. */

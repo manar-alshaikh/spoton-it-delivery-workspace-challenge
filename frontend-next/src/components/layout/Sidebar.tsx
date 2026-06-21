@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearToken } from '@/lib/api';
+import Icon from '@/components/ui/Icon';
 
 const NAV_ITEMS = [
-  { href: '/pm/it-workspace', label: 'IT Workspace', icon: '⬛' },
-  { href: '/pm/releases',     label: 'Releases',     icon: '🚀' },
-  { href: '/pm/score',        label: 'Score',         icon: '📊' },
-];
+  { href: '/pm/it-workspace', label: 'IT Workspace', icon: 'layers'   },
+  { href: '/pm/releases',     label: 'Releases',     icon: 'rocket'   },
+  { href: '/pm/score',        label: 'Score',         icon: 'zap'     },
+] as const;
 
 export default function Sidebar() {
   const router   = useRouter();
@@ -27,7 +28,7 @@ export default function Sidebar() {
             href={href}
             className={pathname.startsWith(href) ? 'nav-active' : ''}
           >
-            <span className="nav-icon">{icon}</span>
+            <Icon name={icon} size={16} />
             {label}
           </Link>
         ))}
@@ -38,7 +39,7 @@ export default function Sidebar() {
           className="nav-logout"
           onClick={() => { clearToken(); router.push('/login'); }}
         >
-          <span className="nav-icon">↩</span>
+          <Icon name="x" size={15} />
           Logout
         </button>
       </div>

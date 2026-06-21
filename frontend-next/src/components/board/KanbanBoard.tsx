@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { WORK_ITEM_STATUSES } from '@/lib/constants/board';
 import { groupByStatus } from '@/lib/utils/groupByStatus';
@@ -12,6 +13,7 @@ interface KanbanBoardProps {
   items: WorkItem[];
   onStatusChange: (id: string, newStatus: string) => Promise<void>;
   onAddItem: (status: string) => void;
+  onViewItem: (item: WorkItem) => void;
   onEditItem: (item: WorkItem) => void;
   onDeleteItem: (id: string) => void;
 }
@@ -20,6 +22,7 @@ export default function KanbanBoard({
   items,
   onStatusChange,
   onAddItem,
+  onViewItem,
   onEditItem,
   onDeleteItem,
 }: KanbanBoardProps) {
@@ -29,12 +32,23 @@ export default function KanbanBoard({
   });
 
   const grouped = groupByStatus(items);
+  const lastDragEnd = useRef(0);
+
+  function finishDrag(event: Parameters<typeof handleDragEnd>[0]) {
+    lastDragEnd.current = Date.now();
+    void handleDragEnd(event);
+  }
+
+  function viewItem(item: WorkItem) {
+    if (Date.now() - lastDragEnd.current < 200) return;
+    onViewItem(item);
+  }
 
   return (
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      onDragEnd={finishDrag}
     >
       <div className="kanban-board">
         {WORK_ITEM_STATUSES.map((status) => (
@@ -43,6 +57,7 @@ export default function KanbanBoard({
             status={status}
             items={grouped[status]}
             onAddItem={onAddItem}
+            onViewItem={viewItem}
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
           />
@@ -52,7 +67,7 @@ export default function KanbanBoard({
       {/* Ghost card rendered on top while dragging */}
       <DragOverlay>
         {activeItem && (
-          <WorkItemCard item={activeItem} onEdit={() => {}} onDelete={() => {}} />
+          <WorkItemCard item={activeItem} onView={() => {}} onEdit={() => {}} onDelete={() => {}} />
         )}
       </DragOverlay>
     </DndContext>

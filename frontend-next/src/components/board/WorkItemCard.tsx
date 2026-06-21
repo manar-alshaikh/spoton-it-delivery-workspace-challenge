@@ -9,11 +9,12 @@ import type { WorkItem } from '@/lib/types';
 
 interface WorkItemCardProps {
   item: WorkItem;
+  onView: (item: WorkItem) => void;
   onEdit: (item: WorkItem) => void;
   onDelete: (id: string) => void;
 }
 
-export default function WorkItemCard({ item, onEdit, onDelete }: WorkItemCardProps) {
+export default function WorkItemCard({ item, onView, onEdit, onDelete }: WorkItemCardProps) {
   const {
     attributes,
     listeners,
@@ -21,13 +22,17 @@ export default function WorkItemCard({ item, onEdit, onDelete }: WorkItemCardPro
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({
+    id: item.id,
+    data: { type: 'work-item', status: item.status },
+  });
 
   const dragStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+  const assignees = item.assignee?.split(',').map((name) => name.trim()).filter(Boolean) ?? [];
 
   return (
     <div
@@ -36,6 +41,13 @@ export default function WorkItemCard({ item, onEdit, onDelete }: WorkItemCardPro
       className="work-item-card"
       {...attributes}
       {...listeners}
+      onClick={() => onView(item)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onView(item);
+        }
+      }}
     >
       <div className="work-item-card__header">
         <span className="work-item-card__title">{item.title}</span>
@@ -45,9 +57,22 @@ export default function WorkItemCard({ item, onEdit, onDelete }: WorkItemCardPro
       <Badge value={item.priority} variant="priority" />
 
       <div className="work-item-card__footer">
-        <div className="work-item-card__avatar" title={item.assignee ?? 'Unassigned'}>
-          {getInitials(item.assignee)}
-        </div>
+        {assignees.length ? (
+          <div className="work-item-card__avatars" aria-label={`Assigned to ${assignees.join(', ')}`}>
+            {assignees.slice(0, 3).map((name) => (
+              <div className="work-item-card__avatar" title={name} key={name}>
+                {getInitials(name)}
+              </div>
+            ))}
+            {assignees.length > 3 && (
+              <div className="work-item-card__avatar work-item-card__avatar--more" title={assignees.slice(3).join(', ')}>
+                +{assignees.length - 3}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="work-item-card__unassigned">Not assigned</span>
+        )}
         {item.dueDate && (
           <span className="work-item-card__due">{formatShortDate(item.dueDate)}</span>
         )}

@@ -10,6 +10,7 @@ interface KanbanColumnProps {
   status: string;
   items: WorkItem[];
   onAddItem: (status: string) => void;
+  onViewItem: (item: WorkItem) => void;
   onEditItem: (item: WorkItem) => void;
   onDeleteItem: (id: string) => void;
 }
@@ -18,10 +19,14 @@ export default function KanbanColumn({
   status,
   items,
   onAddItem,
+  onViewItem,
   onEditItem,
   onDeleteItem,
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+    data: { type: 'column', status },
+  });
   const accentColor = COLUMN_COLORS[status as keyof typeof COLUMN_COLORS] ?? '#94a3b8';
   const label = COLUMN_LABELS[status as keyof typeof COLUMN_LABELS] ?? status;
 
@@ -36,10 +41,14 @@ export default function KanbanColumn({
 
       <div ref={setNodeRef} className="kanban-column__body">
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          {!items.length && (
+            <div className="kanban-column__empty">No work items yet</div>
+          )}
           {items.map((item) => (
             <WorkItemCard
               key={item.id}
               item={item}
+              onView={onViewItem}
               onEdit={onEditItem}
               onDelete={onDeleteItem}
             />

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, ScoreSummary } from '@/lib/api';
+import { api } from '@/lib/api';
+import type { ScoreSummary } from '@/lib/types';
 
 export default function ScorePage() {
   const [score, setScore] = useState<ScoreSummary | null>(null);

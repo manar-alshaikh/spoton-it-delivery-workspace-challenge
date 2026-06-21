@@ -28,7 +28,12 @@ export default function CardMenu({ item, onEdit, onDelete }: CardMenuProps) {
   }, []);
 
   return (
-    <div ref={ref} className="card-menu">
+    <div
+      ref={ref}
+      className="card-menu"
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       <button
         className="card-menu__trigger"
         aria-label="Card options"
